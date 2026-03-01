@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.components.panel_custom import async_register_panel, async_remove_panel
+from homeassistant.components.panel_custom import async_register_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -49,7 +49,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload integration."""
-    async_remove_panel(hass, PANEL_URL)
+    # `async_remove_panel` is exposed via frontend on current HA versions.
+    if "frontend" in hass.data and hasattr(hass.components, "frontend"):
+        hass.components.frontend.async_remove_panel(PANEL_URL)
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
         hass.data[DOMAIN].pop(entry.entry_id)
     return True

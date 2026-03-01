@@ -90,10 +90,6 @@ class GoogleAssistantManagerPanel extends LitElementBase {
       .entity-id {
         color: var(--secondary-text-color);
       }
-      .entity-actions {
-        color: var(--primary-color);
-        text-decoration: none;
-      }
       .banner {
         background: var(--warning-color);
         color: var(--text-primary-color);
@@ -281,10 +277,6 @@ class GoogleAssistantManagerPanel extends LitElementBase {
     );
   }
 
-  _entityEditUrl(entityId) {
-    return `/config/entities/entity/${encodeURIComponent(entityId)}`;
-  }
-
   async _save() {
     this._saving = true;
     this._error = null;
@@ -404,10 +396,13 @@ class GoogleAssistantManagerPanel extends LitElementBase {
                             </strong>
                           </div>
                           <div class="entity-meta">
-                            <span class="entity-id">${entity.entity_id}</span>
-                            <a class="entity-actions" href=${this._entityEditUrl(entity.entity_id)}>
-                              Edit
-                            </a>
+                            <button
+                              class="entity-link entity-id"
+                              type="button"
+                              @click=${() => this._showMoreInfo(entity.entity_id)}
+                            >
+                              ${entity.entity_id}
+                            </button>
                           </div>
                         </div>
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.panel_custom import async_register_panel
 from homeassistant.config_entries import ConfigEntry
@@ -35,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         hass.http.register_static_path(static_url, static_path, cache_headers=False)
 
-    await async_register_panel(
+    register_result = async_register_panel(
         hass,
         frontend_url_path=PANEL_URL,
         webcomponent_name="google-assistant-manager-panel",
@@ -44,6 +46,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         module_url=f"/{DOMAIN}/frontend/{PANEL_JS_FILENAME}",
         require_admin=True,
     )
+    if inspect.isawaitable(register_result):
+        await register_result
 
     async_register_websocket_commands(hass)
     await write_config(hass, data)

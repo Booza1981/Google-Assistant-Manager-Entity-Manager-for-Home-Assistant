@@ -13,6 +13,7 @@ class GoogleAssistantManagerPanel extends LitElementBase {
       _saving: { state: true },
       _error: { state: true },
       _snippet: { state: true },
+      _collapsedDomains: { state: true },
     };
   }
 
@@ -101,6 +102,7 @@ class GoogleAssistantManagerPanel extends LitElementBase {
     this._saving = false;
     this._error = null;
     this._snippet = "";
+    this._collapsedDomains = {};
     this._loaded = false;
   }
 
@@ -119,9 +121,21 @@ class GoogleAssistantManagerPanel extends LitElementBase {
       ]);
       this._entities = entities;
       this._snippet = snippetResp.snippet;
+      this._initializeCollapsedDomains();
     } catch (err) {
       this._error = String(err);
     }
+  }
+
+  _initializeCollapsedDomains() {
+    const domains = [...new Set(this._entities.map((entity) => entity.domain))];
+    const next = { ...this._collapsedDomains };
+    domains.forEach((domain) => {
+      if (!(domain in next)) {
+        next[domain] = domain === "sensor";
+      }
+    });
+    this._collapsedDomains = next;
   }
 
   _toDraft(entity) {
@@ -208,6 +222,22 @@ class GoogleAssistantManagerPanel extends LitElementBase {
     this._drafts = nextDrafts;
   }
 
+  _toggleDomainCollapsed(domain) {
+    this._collapsedDomains = {
+      ...this._collapsedDomains,
+      [domain]: !this._collapsedDomains[domain],
+    };
+  }
+
+  _setAllCollapsed(collapsed) {
+    const domains = [...new Set(this._entities.map((entity) => entity.domain))];
+    const next = { ...this._collapsedDomains };
+    domains.forEach((domain) => {
+      next[domain] = collapsed;
+    });
+    this._collapsedDomains = next;
+  }
+
   async _save() {
     this._saving = true;
     this._error = null;
@@ -280,6 +310,10 @@ class GoogleAssistantManagerPanel extends LitElementBase {
           ${this._saving ? "Saving..." : `Save (${dirtyCount})`}
         </button>
       </div>
+      <div class="section-actions" style="margin-bottom: 12px;">
+        <button @click=${() => this._setAllCollapsed(true)}>Collapse all</button>
+        <button @click=${() => this._setAllCollapsed(false)}>Expand all</button>
+      </div>
 
       ${this._error ? html`<div class="section">${this._error}</div>` : ""}
       ${dirtyCount > 0 ? html`<div class="muted">Unsaved changes: ${dirtyCount}</div>` : ""}
@@ -289,60 +323,66 @@ class GoogleAssistantManagerPanel extends LitElementBase {
         .map((domain) => {
           const domainEntities = grouped[domain];
           const exposed = this._domainExposeCount(domainEntities);
+          const collapsed = !!this._collapsedDomains[domain];
           return html`
             <div class="section">
               <div class="section-header">
                 <strong>${domain} (${exposed}/${domainEntities.length} exposed)</strong>
                 <div class="section-actions">
+                  <button @click=${() => this._toggleDomainCollapsed(domain)}>
+                    ${collapsed ? "Expand" : "Collapse"}
+                  </button>
                   <button @click=${() => this._setDomainExpose(domainEntities, true)}>All</button>
                   <button @click=${() => this._setDomainExpose(domainEntities, false)}>None</button>
                 </div>
               </div>
 
-              ${domainEntities.map((entity) => {
-                const draft = this._getDraft(entity);
-                return html`
-                  <div class="row">
-                    <div>
-                      <div><strong>${entity.friendly_name || entity.entity_id}</strong></div>
-                      <div class="muted">${entity.entity_id}</div>
-                    </div>
+              ${collapsed
+                ? html`<div class="muted">Section collapsed.</div>`
+                : domainEntities.map((entity) => {
+                    const draft = this._getDraft(entity);
+                    return html`
+                      <div class="row">
+                        <div>
+                          <div><strong>${entity.friendly_name || entity.entity_id}</strong></div>
+                          <div class="muted">${entity.entity_id}</div>
+                        </div>
 
-                    <label>
-                      <input
-                        type="checkbox"
-                        .checked=${draft.expose}
-                        @change=${(ev) =>
-                          this._setDraft(entity, {
-                            expose: ev.target.checked,
-                          })}
-                      />
-                      expose
-                    </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            .checked=${draft.expose}
+                            @change=${(ev) =>
+                              this._setDraft(entity, {
+                                expose: ev.target.checked,
+                              })}
+                          />
+                          expose
+                        </label>
 
-                    <input
-                      placeholder="aliases: comma,separated"
-                      .value=${draft.aliases.join(", ")}
-                      @input=${(ev) =>
-                        this._setDraft(entity, {
-                          aliases: ev.target.value
-                            .split(",")
-                            .map((part) => part.trim())
-                            .filter((part) => part.length > 0),
-                        })}
-                    />
+                        <input
+                          placeholder="aliases: comma,separated"
+                          .value=${draft.aliases.join(", ")}
+                          @input=${(ev) =>
+                            this._setDraft(entity, {
+                              aliases: ev.target.value
+                                .split(",")
+                                .map((part) => part.trim())
+                                .filter((part) => part.length > 0),
+                            })}
+                        />
 
-                    <input
-                      placeholder="Optional Google name"
-                      .value=${draft.name}
-                      @input=${(ev) =>
-                        this._setDraft(entity, {
-                          name: ev.target.value,
-                        })}
-                    />
-                  </div>
-                `;
-              })}
+                        <input
+                          placeholder="Optional Google name"
+                          .value=${draft.name}
+                          @input=${(ev) =>
+                            this._setDraft(entity, {
+                              name: ev.target.value,
+                            })}
+                        />
+                      </div>
+                    `;
+                  })}
             </div>
           `;
         })}

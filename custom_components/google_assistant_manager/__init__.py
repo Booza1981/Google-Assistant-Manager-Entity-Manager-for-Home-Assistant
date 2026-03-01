@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         hass.http.register_static_path(static_url, static_path, cache_headers=False)
 
-    async_register_panel(
+    await async_register_panel(
         hass,
         frontend_url_path=PANEL_URL,
         webcomponent_name="google-assistant-manager-panel",
